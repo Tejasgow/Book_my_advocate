@@ -1,0 +1,188 @@
+from django.core.mail import send_mail
+from django.conf import settings
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import User, PasswordResetOTP
+
+
+# =========================
+# NOTIFICATION SERVICES
+# =========================
+
+def send_email(subject, message, email):
+    if email:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=True
+        )
+
+
+def send_sms(phone, message):
+    if phone:
+        print(f"SMS to {phone}: {message}")
+
+
+# =========================
+# TOKEN SERVICES
+# =========================
+
+def generate_tokens(user):
+    refresh = RefreshToken.for_user(user)
+    return {
+        "access": str(refresh.access_token),
+        "refresh": str(refresh)
+    }
+
+
+def logout_user(refresh_token):
+    token = RefreshToken(refresh_token)
+    token.blacklist()
+
+
+# =========================
+# AUTH SERVICES
+# =========================
+
+def register_user(serializer):
+    user = serializer.save()
+    tokens = generate_tokens(user)
+
+    send_email(
+        "Welcome 🎉",
+        f"Hi {user.username}, your account has been created successfully!",
+        user.email
+    )
+
+    send_sms(
+        user.phone,
+        "Your account has been created successfully!"
+    )
+
+    return user, tokens
+
+
+def login_user(user):
+    tokens = generate_tokens(user)
+
+    send_email(
+        "Login Alert",
+        f"Hi {user.username}, you logged in successfully!",
+        user.email
+    )
+
+    send_sms(
+        user.phone,
+        "Login successful ✅"
+    )
+
+    return tokens
+
+
+# =========================
+# PROFILE SERVICES
+# =========================
+
+def get_user(request_user, user_id=None):
+    if user_id:
+        return User.objects.filter(id=user_id).first()
+    return request_user
+
+
+def update_profile(user, serializer):
+    serializer.save()
+
+    send_email(
+        "Profile Updated",
+        "Your profile has been updated successfully.",
+        user.email
+    )
+
+    send_sms(
+        user.phone,
+        "Profile updated successfully ✅"
+    )
+
+
+# =========================
+# PASSWORD SERVICES
+# =========================
+
+def change_password(user, new_password):
+    user.set_password(new_password)
+    user.save()
+
+    send_email(
+        "Password Changed",
+        "Your password has been changed successfully.",
+        user.email
+    )
+
+    send_sms(
+        user.phone,
+        "Password changed successfully ✅"
+    )
+
+
+# =========================
+# OTP SERVICES
+# =========================
+
+def request_password_otp(phone):
+    user = User.objects.get(phone=phone)
+
+    PasswordResetOTP.objects.filter(
+        user=user,
+        is_used=False
+    ).delete()
+
+    otp_obj = PasswordResetOTP.objects.create(user=user)
+
+    send_email(
+        "Password Reset OTP",
+        f"Your OTP is {otp_obj.otp}. Valid for 10 minutes.",
+        user.email
+    )
+
+    send_sms(
+        user.phone,
+        f"Your OTP is {otp_obj.otp}. Valid for 10 minutes."
+    )
+
+    return otp_obj
+
+
+def verify_password_otp(otp_obj):
+    otp_obj.is_used = True
+    otp_obj.save()
+
+    send_email(
+        "OTP Verified",
+        "OTP verified successfully ✅",
+        otp_obj.user.email
+    )
+
+    send_sms(
+        otp_obj.user.phone,
+        "OTP verified successfully ✅"
+    )
+
+
+def reset_password(user, otp_obj, new_password):
+    user.set_password(new_password)
+    user.save()
+
+    otp_obj.is_used = True
+    otp_obj.save()
+
+    send_email(
+        "Password Reset Successful",
+        "Your password has been reset successfully 🔐",
+        user.email
+    )
+
+    send_sms(
+        user.phone,
+        "Password reset successfully ✅"
+    )

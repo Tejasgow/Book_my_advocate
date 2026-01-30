@@ -5,95 +5,116 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 
 from .models import Appointment
-from .serializers import (
-    AppointmentSerializer,
-    AppointmentCreateSerializer
-)
-from .permissions import IsAdvocateUser
+from .serializers import AppointmentSerializer
+from .permissions import IsAdvocateUser, IsClientUser, IsOwnerOrAdvocate
+from . import services
 
 
 # -----------------------------
-# Create Appointment (USER)
+# Create Appointment
 # -----------------------------
 class AppointmentCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsClientUser]
 
     def post(self, request):
-        serializer = AppointmentCreateSerializer(
-            data=request.data,
-            context={'request': request}
-        )
-        if serializer.is_valid():
-            appointment = serializer.save()
-            return Response({
+        appointment = services.create_appointment(request)
+        return Response(
+            {
                 "message": "Appointment booked successfully ✅",
                 "data": AppointmentSerializer(appointment).data
-            }, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# -----------------------------
-# User Appointments
-# -----------------------------
-class UserAppointmentListView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        appointments = Appointment.objects.filter(user=request.user)
-        serializer = AppointmentSerializer(appointments, many=True)
-        return Response({
-            "message": "Your appointments fetched successfully ✅",
-            "data": serializer.data
-        })
-
-
-# -----------------------------
-# Advocate Appointments
-# -----------------------------
-class AdvocateAppointmentListView(APIView):
-    permission_classes = [IsAuthenticated, IsAdvocateUser]
-
-    def get(self, request):
-        appointments = Appointment.objects.filter(
-            advocate__user=request.user
+            },
+            status=status.HTTP_201_CREATED
         )
-        serializer = AppointmentSerializer(appointments, many=True)
-        return Response({
-            "message": "Advocate appointments fetched successfully ✅",
-            "data": serializer.data
-        })
 
 
 # -----------------------------
-# Advocate Update Appointment Status
+# Client Appointment List
+# -----------------------------
+class ClientAppointmentListView(APIView):
+    permission_classes = [IsAuthenticated, IsClientUser]
+
+    def get(self, request):
+        appointments = services.list_client_appointments(request.user)
+        serializer = AppointmentSerializer(appointments, many=True)
+        return Response({"message": "Appointments fetched ✅", "data": serializer.data})
+
+
+# -----------------------------
+# Advocate Status Update
 # -----------------------------
 class AppointmentStatusUpdateView(APIView):
     permission_classes = [IsAuthenticated, IsAdvocateUser]
 
     def patch(self, request, pk):
-        appointment = get_object_or_404(
-            Appointment,
-            pk=pk,
-            advocate__user=request.user
+        try:
+            appointment = services.update_appointment_status(
+                request.user,
+                pk,
+                request.data.get('status')
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
+
+        return Response(
+            {
+                "message": "Status updated ✅",
+                "data": AppointmentSerializer(appointment).data
+            }
         )
 
-        status_value = request.data.get('status')
-        allowed_status = ['APPROVED', 'REJECTED', 'COMPLETED']
 
-        if status_value not in allowed_status:
-            return Response(
-                {"error": "Invalid status"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+# -----------------------------
+# Cancel Appointment
+# -----------------------------
+class AppointmentCancelView(APIView):
+    permission_classes = [IsAuthenticated, IsClientUser]
 
-        appointment.status = status_value
-        appointment.save()
+    def post(self, request, pk):
+        try:
+            appointment = services.cancel_appointment(request.user, pk)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
 
-        return Response({
-            "message": "Appointment status updated ✅",
-            "data": AppointmentSerializer(appointment).data
-        })
+        return Response(
+            {
+                "message": "Appointment cancelled ✅",
+                "data": AppointmentSerializer(appointment).data
+            }
+        )
 
 
+# -----------------------------
+# Appointment Detail
+# -----------------------------
+class AppointmentDetailView(APIView):
+    permission_classes = [IsAuthenticated, IsOwnerOrAdvocate]
 
+    def get(self, request, pk):
+        appointment = get_object_or_404(Appointment, pk=pk)
+        self.check_object_permissions(request, appointment)
+        return Response(
+            {
+                "message": "Appointment fetched ✅",
+                "data": AppointmentSerializer(appointment).data
+            }
+        )
+
+
+# -----------------------------
+# Update Appointment
+# -----------------------------
+class AppointmentUpdateView(APIView):
+    permission_classes = [IsAuthenticated, IsOwnerOrAdvocate]
+
+    def put(self, request, pk):
+        appointment = get_object_or_404(Appointment, pk=pk)
+        self.check_object_permissions(request, appointment)
+
+        appointment = services.update_appointment(appointment, request.data)
+
+        return Response(
+            {
+                "message": "Appointment updated ✅",
+                "data": AppointmentSerializer(appointment).data
+            }
+        )

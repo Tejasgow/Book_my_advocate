@@ -55,8 +55,10 @@ INSTALLED_APPS = [
     'app.appointments',
     'app.cases',
     'app.chat',
-    'app.documents',
-    'app.notifications',
+    'app.client',
+    'app.payments',
+    'app.reviews'
+
 ]
 
 MIDDLEWARE = [
@@ -126,7 +128,7 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=365),
+    'REFRESH_TOKEN_LIFETIME': timedelta(hours=24),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
@@ -178,4 +180,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'tejasvijay96@gmail.com'
 EMAIL_HOST_PASSWORD = 'fqycfktzsiqmgfzj'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = 'Book My Advocate <tejasvijay96@gmail.com>'
+
+RAZORPAY_KEY_ID = "rzp_test_xxxxx"
+RAZORPAY_KEY_SECRET = "xxxxxxxx"

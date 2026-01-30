@@ -1,32 +1,62 @@
 from django.urls import path
 from .views import (
     AppointmentCreateView,
-    UserAppointmentListView,
-    AdvocateAppointmentListView,
-    AppointmentStatusUpdateView
+    ClientAppointmentListView,
+    AppointmentStatusUpdateView,
+    AppointmentCancelView,
+    AppointmentDetailView,
+    AppointmentUpdateView,
 )
-
-app_name = "appointments"
 
 urlpatterns = [
 
-    # -----------------------------
-    # Create appointment (USER)
-    # -----------------------------
-    path('create/',AppointmentCreateView.as_view(),name='appointment-create'),
+    # =================================================
+    # CLIENT APPOINTMENT ENDPOINTS
+    # =================================================
 
-    # -----------------------------
-    # User appointments
-    # -----------------------------
-    path('user/', UserAppointmentListView.as_view(), name='user-appointments'),
+    # List all client appointments
+    path(
+        'client/appointments/',
+        ClientAppointmentListView.as_view(),
+        name='client-appointment-list'
+    ),
 
-    # -----------------------------
-    # Advocate appointments
-    # -----------------------------
-    path('advocate/', AdvocateAppointmentListView.as_view(),name='advocate-appointments'),
+    # Create appointment
+    path(
+        'client/appointments/create/',
+        AppointmentCreateView.as_view(),
+        name='client-appointment-create'
+    ),
 
-    # -----------------------------
-    # Update appointment status (ADVOCATE)
-    # -----------------------------
-    path('update-status/<int:pk>/', AppointmentStatusUpdateView.as_view(),name='appointment-status-update'),
+    # Get appointment detail
+    path(
+        'client/appointments/<int:pk>/',
+        AppointmentDetailView.as_view(),
+        name='client-appointment-detail'
+    ),
+
+    # Update / Reschedule appointment
+    path(
+        'client/appointments/<int:pk>/update/',
+        AppointmentUpdateView.as_view(),
+        name='client-appointment-update'
+    ),
+
+    # Cancel appointment
+    path(
+        'client/appointments/<int:pk>/cancel/',
+        AppointmentCancelView.as_view(),
+        name='client-appointment-cancel'
+    ),
+
+    # =================================================
+    # ADVOCATE APPOINTMENT ENDPOINTS
+    # =================================================
+
+    # Approve / Reject / Complete appointment
+    path(
+        'advocate/appointments/<int:pk>/status/',
+        AppointmentStatusUpdateView.as_view(),
+        name='advocate-appointment-status'
+    ),
 ]

@@ -23,5 +23,8 @@ urlpatterns = [
     path('api/advocates/', include('app.advocates.urls')),
     path('api/appointments/', include('app.appointments.urls')),
     path('api/cases/',include('app.cases.urls')),
-    path('api/chat/',include('app.chat.urls'))
+    path('api/chat/',include('app.chat.urls')),
+    path('api/client/',include('app.client.urls')),
+    path('api/payments/', include('app.payments.urls')),
+    path('api/reviews/',include('app.reviews.urls'))
 ]

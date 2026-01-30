@@ -1,10 +1,10 @@
-from django.http import FileResponse
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
+from django.shortcuts import get_object_or_404
 
-from .models import Case, CaseHearing, CaseDocument
+from .models import Case, CaseDocument, CaseHearing
 from .serializers import (
     CaseSerializer,
     CaseCreateSerializer,
@@ -12,6 +12,8 @@ from .serializers import (
     CaseDocumentSerializer
 )
 from .permissions import IsAdvocate, IsCaseOwner
+from . import services
+
 
 
 # -------------------------------------------------
@@ -23,22 +25,19 @@ class CreateCaseView(APIView):
     def post(self, request):
         serializer = CaseCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        case = serializer.save()
 
-        return Response(
-            CaseSerializer(case).data,
-            status=status.HTTP_201_CREATED
-        )
+        case = services.create_case(serializer)
+        return Response(CaseSerializer(case).data, status=status.HTTP_201_CREATED)
 
 
 # -------------------------------------------------
-# User Cases
+# Client Cases
 # -------------------------------------------------
 class UserCasesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        cases = Case.objects.filter(client=request.user)
+        cases = services.get_client_cases(request.user.client_profile)
         return Response(CaseSerializer(cases, many=True).data)
 
 
@@ -49,9 +48,7 @@ class AdvocateCasesView(APIView):
     permission_classes = [IsAuthenticated, IsAdvocate]
 
     def get(self, request):
-        cases = Case.objects.filter(
-            advocate=request.user.advocate_profile
-        )
+        cases = services.get_advocate_cases(request.user.advocate_profile)
         return Response(CaseSerializer(cases, many=True).data)
 
 
@@ -62,14 +59,7 @@ class CaseDetailView(APIView):
     permission_classes = [IsAuthenticated, IsCaseOwner]
 
     def get(self, request, pk):
-        try:
-            case = Case.objects.get(pk=pk)
-        except Case.DoesNotExist:
-            return Response(
-                {"detail": "Case not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
+        case = services.get_case(pk)
         self.check_object_permissions(request, case)
         return Response(CaseSerializer(case).data)
 
@@ -81,102 +71,99 @@ class CaseHearingCreateView(APIView):
     permission_classes = [IsAuthenticated, IsAdvocate]
 
     def post(self, request, case_id):
-        case = Case.objects.get(
+        case = get_object_or_404(
+            Case,
             id=case_id,
             advocate=request.user.advocate_profile
         )
 
         serializer = CaseHearingSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(case=case)
 
-        return Response(serializer.data, status=201)
+        hearing = services.add_hearing(case, serializer)
+        return Response(
+            CaseHearingSerializer(hearing).data,
+            status=status.HTTP_201_CREATED
+        )
 
 
 # -------------------------------------------------
-# View Hearings (CLIENT + ADVOCATE)
+# View Hearings
 # -------------------------------------------------
 class CaseHearingListView(APIView):
     permission_classes = [IsAuthenticated, IsCaseOwner]
 
     def get(self, request, case_id):
-        case = Case.objects.get(id=case_id)
+        case = services.get_case(case_id)
         self.check_object_permissions(request, case)
 
-        hearings = case.hearings.all()
-        return Response(
-            CaseHearingSerializer(hearings, many=True).data
-        )
+        hearings = services.list_hearings(case)
+        return Response(CaseHearingSerializer(hearings, many=True).data)
 
 
 # -------------------------------------------------
-# Upload Document (CLIENT + ADVOCATE)
+# Upload Document
 # -------------------------------------------------
 class CaseDocumentUploadView(APIView):
     permission_classes = [IsAuthenticated, IsCaseOwner]
 
     def post(self, request, case_id):
-        case = Case.objects.get(id=case_id)
+        case = services.get_case(case_id)
         self.check_object_permissions(request, case)
 
         serializer = CaseDocumentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(
-            case=case,
-            uploaded_by=request.user
-        )
 
-        return Response(serializer.data, status=201)
+        document = services.upload_document(case, request.user, serializer)
+        return Response(
+            CaseDocumentSerializer(document).data,
+            status=status.HTTP_201_CREATED
+        )
 
 
 # -------------------------------------------------
-# View Documents (CLIENT + ADVOCATE)
+# View Documents
 # -------------------------------------------------
 class CaseDocumentListView(APIView):
     permission_classes = [IsAuthenticated, IsCaseOwner]
 
     def get(self, request, case_id):
-        case = Case.objects.get(id=case_id)
+        case = services.get_case(case_id)
         self.check_object_permissions(request, case)
 
-        docs = case.documents.all()
-        return Response(
-            CaseDocumentSerializer(docs, many=True).data
-        )
+        documents = services.list_documents(case)
+        return Response(CaseDocumentSerializer(documents, many=True).data)
 
 
 # -------------------------------------------------
-# Download Document (CLIENT + ADVOCATE)
+# Download Document
 # -------------------------------------------------
 class CaseDocumentDownloadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, doc_id):
-        try:
-            doc = CaseDocument.objects.get(id=doc_id)
-        except CaseDocument.DoesNotExist:
-            return Response(
-                {"detail": "Document not found"},
-                status=404
-            )
+        doc = get_object_or_404(CaseDocument, id=doc_id)
 
-        case = doc.case
+        response = services.download_document(doc, request.user)
+        if not response:
+            return Response({"detail": "Access denied"}, status=status.HTTP_403_FORBIDDEN)
 
-        # permission check
-        if not (
-            case.client == request.user or
-            (
-                hasattr(request.user, 'advocate_profile') and
-                case.advocate == request.user.advocate_profile
-            )
-        ):
-            return Response(
-                {"detail": "Access denied"},
-                status=403
-            )
+        return response
 
-        return FileResponse(
-            doc.document.open('rb'),
-            as_attachment=True,
-            filename=doc.document.name.split('/')[-1]
-        )
+# -------------------------------------------------
+# Admin Dashboard Stats
+# -------------------------------------------------
+class AdminDashboardStatsView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        data = {
+            "total_cases": Case.objects.count(),
+            "open_cases": Case.objects.filter(status='OPEN').count(),
+            "in_progress_cases": Case.objects.filter(status='IN_PROGRESS').count(),
+            "closed_cases": Case.objects.filter(status='CLOSED').count(),
+
+            "total_hearings": CaseHearing.objects.count(),
+            "total_documents": CaseDocument.objects.count(),
+        }
+        return Response(data)

@@ -1,21 +1,10 @@
 from django.urls import path
-from .views import (
-    RegisterView,
-    LoginView,
-    LogoutView,
-    ProfileView,
-    ChangePasswordView,
-    RequestPasswordOTPView,
-    VerifyPasswordOTPView,
-    ResetPasswordView,
-)
-from rest_framework_simplejwt.views import (
-    TokenRefreshView,
-    TokenVerifyView,
-    TokenObtainPairView
-    
+from .views import (RegisterView,LoginView,LogoutView,ProfileView,ChangePasswordView,
+    ResetPasswordView,RequestPasswordOTPView,VerifyPasswordOTPView)
+from rest_framework_simplejwt.views import (TokenRefreshView,TokenVerifyView)
 
-)
+app_name = "accounts"
+
 urlpatterns = [
 
     # =================================================
@@ -41,13 +30,9 @@ urlpatterns = [
     path('password/otp/verify/', VerifyPasswordOTPView.as_view(), name='password-otp-verify'),
     path('password/reset/', ResetPasswordView.as_view(), name='password-reset'),
 
-
     # =================================================
     # JWT TOKEN MANAGEMENT
     # =================================================
-
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('token/verify/', TokenVerifyView.as_view(), name='token-verify'),
-    path('token/', TokenObtainPairView.as_view(), name='token-obtain-pair'),
-
 ]
