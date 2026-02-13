@@ -2,6 +2,11 @@ from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, PasswordResetOTP
+from django.contrib.auth.hashers import make_password
+import random
+from django.contrib.auth.hashers import check_password
+from django.utils import timezone
+
 
 
 # =========================
@@ -128,45 +133,69 @@ def change_password(user, new_password):
 # =========================
 # OTP SERVICES
 # =========================
-
 def request_password_otp(phone):
-    user = User.objects.get(phone=phone)
+    user = User.objects.filter(phone=phone).first()
+    if not user:
+        raise ValueError("User not found")
 
+    # Remove previous unused OTPs
     PasswordResetOTP.objects.filter(
         user=user,
         is_used=False
     ).delete()
 
-    otp_obj = PasswordResetOTP.objects.create(user=user)
+    # Create OTP object
+    otp_obj = PasswordResetOTP(user=user)
+
+    # Explicitly generate OTP
+    raw_otp = otp_obj.set_otp()
+    otp_obj.save()
+
+    # Send raw OTP
+    send_sms(
+        user.phone,
+        f"Your OTP is {raw_otp}. Valid for 10 minutes."
+    )
 
     send_email(
         "Password Reset OTP",
-        f"Your OTP is {otp_obj.otp}. Valid for 10 minutes.",
+        f"Your OTP is {raw_otp}. Valid for 10 minutes.",
         user.email
-    )
-
-    send_sms(
-        user.phone,
-        f"Your OTP is {otp_obj.otp}. Valid for 10 minutes."
     )
 
     return otp_obj
 
 
-def verify_password_otp(otp_obj):
+def verify_password_otp(user, entered_otp):
+    try:
+        otp_obj = PasswordResetOTP.objects.get(
+            user=user,
+            is_used=False
+        )
+    except PasswordResetOTP.DoesNotExist:
+        return False, "OTP not found or already used"
+
+    # Verify OTP
+    if not check_password(entered_otp, otp_obj.otp):
+        return False, "Invalid OTP"
+
+    # Mark OTP as used
     otp_obj.is_used = True
+    otp_obj.verified_at = timezone.now()
     otp_obj.save()
 
     send_email(
         "OTP Verified",
         "OTP verified successfully ✅",
-        otp_obj.user.email
+        user.email
     )
 
     send_sms(
-        otp_obj.user.phone,
+        user.phone,
         "OTP verified successfully ✅"
     )
+
+    return True, "OTP verified successfully"
 
 
 def reset_password(user, otp_obj, new_password):

@@ -10,23 +10,23 @@ urlpatterns = [
     # ===============================
     # CASES Endpoints
     # ===============================
-    path('cases/user/', UserCasesView.as_view(), name='user-cases'),             # client cases
-    path('cases/advocate/', AdvocateCasesView.as_view(), name='advocate-cases'),
     path('cases/create/', CreateCaseView.as_view(), name='case-create'),
     path('cases/<int:pk>/', CaseDetailView.as_view(), name='case-detail'),
+    path('cases/user/', UserCasesView.as_view(), name='user-cases'),             
+    path('cases/advocate/', AdvocateCasesView.as_view(), name='advocate-cases'),
 
     # ===============================
     # CASE HEARINGS Endpoints
     # ===============================
-    path('cases/<int:case_id>/hearings/',CaseHearingListView.as_view(),name='case-hearing-list'),
     path('cases/<int:case_id>/hearings/create/',CaseHearingCreateView.as_view(),name='case-hearing-create'),
+    path('cases/<int:case_id>/hearings/',CaseHearingListView.as_view(),name='case-hearing-list'),
 
     # ===============================
     # CASE DOCUMENTS (Nested)
     # ===============================
-    path('cases/<int:case_id>/documents/',CaseDocumentListView.as_view(),name='case-document-list'),
     path('cases/<int:case_id>/documents/upload/',CaseDocumentUploadView.as_view(),name='case-document-upload'),
     path('cases/documents/<int:doc_id>/download/',CaseDocumentDownloadView.as_view(),name='case-document-download'),
+    path('cases/<int:case_id>/documents/',CaseDocumentListView.as_view(),name='case-document-list'),
 
     # ===============================
     # ADMIN DASHBOARD

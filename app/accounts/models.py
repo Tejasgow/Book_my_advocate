@@ -48,53 +48,27 @@ class User(AbstractUser):
 # =================================================
 # PASSWORD RESET OTP MODEL
 # =================================================
-
 class PasswordResetOTP(models.Model):
-    """
-    Stores hashed OTP for secure password reset
-    """
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='password_otps'
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE,related_name="password_otps")
     otp = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
 
     OTP_EXPIRY_MINUTES = 10
 
-    # ---------- OTP Logic ----------
     def is_expired(self):
-        """
-        Check if OTP has expired
-        """
-        return timezone.now() > self.created_at + timedelta(
-            minutes=self.OTP_EXPIRY_MINUTES
-        )
+        return timezone.now() > self.created_at + timedelta(minutes=self.OTP_EXPIRY_MINUTES )
 
     def set_otp(self):
-        """
-        Generate and hash OTP
-        """
         raw_otp = str(random.randint(100000, 999999))
         self.otp = make_password(raw_otp)
         return raw_otp
 
     def verify_otp(self, raw_otp):
-        """
-        Verify raw OTP with hashed OTP
-        """
-        return check_password(raw_otp, self.otp)
-
-    def save(self, *args, **kwargs):
-        """
-        Auto-generate OTP on save if not present
-        """
-        if not self.otp:
-            self.set_otp()
-        super().save(*args, **kwargs)
+        return check_password(str(raw_otp), self.otp)
 
     def __str__(self):
         return f"PasswordResetOTP(user={self.user.username}, used={self.is_used})"
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]

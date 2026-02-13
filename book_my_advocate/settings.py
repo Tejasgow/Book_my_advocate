@@ -27,7 +27,9 @@ SECRET_KEY = 'django-insecure-+5hwph+8$8la7n$!k+-@cb@8oypff+7jrd1-yj&ade-(h-bq=s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [ "localhost",
+                 "127.0.0.1",
+                 "192.168.0.3"]
 
 
 # Application definition
@@ -44,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'corsheaders',
 
@@ -72,7 +75,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = False  # Set to False for production
+CORS_ALLOW_ALL_ORIGINS = True # Set to False for production
 CORS_ALLOW_CREDENTIALS = True
 
 
@@ -84,6 +87,14 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',      # Vite dev server
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
+    'http://192.168.0.3:5173',
+]
+
+CSRF_TRUSTED_ORIGINS=[
+    'http://localhost:5173',
+    'http://192.168.0.3:5173',
+
+
 ]
 
 TEMPLATES = [
@@ -115,7 +126,8 @@ DATABASES = {
 }
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES':
+    (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
@@ -123,6 +135,9 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
+    ),
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "app.accounts.authentication.CookieJWTAuthentication",
     ),
 }
 
@@ -158,7 +173,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -184,3 +199,14 @@ DEFAULT_FROM_EMAIL = 'Book My Advocate <tejasvijay96@gmail.com>'
 
 RAZORPAY_KEY_ID = "rzp_test_xxxxx"
 RAZORPAY_KEY_SECRET = "xxxxxxxx"
+
+
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_HTTPONLY = True
+
+# Production only
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

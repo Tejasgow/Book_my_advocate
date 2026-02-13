@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from app.client.models import ClientProfile
 from app.advocates.models import AdvocateProfile
 from app.appointments.models import Appointment
@@ -130,7 +131,7 @@ class CaseDocument(models.Model):
     )
 
     uploaded_by = models.ForeignKey(
-        ClientProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='uploaded_documents'
     )

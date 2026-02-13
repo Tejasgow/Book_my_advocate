@@ -4,26 +4,41 @@ from .views import (
     AdvocateListView,
     AdvocateDetailView,
     AdvocateUpdateView,
+    AdvocateUploadOfficialIDView,
     AdvocateVerifyView,
     AssignAssistantView,
-    ListAssistantsView
+    ListAssistantsView,
 )
 
-app_name = "advocates"
-
 urlpatterns = [
-    # -----------------------------
-    # Advocate Profile Endpoints
-    # -----------------------------
-    path("create/", AdvocateCreateView.as_view(), name="advocate-create"),          # POST: create profile
-    path("list/", AdvocateListView.as_view(), name="advocate-list"),               # GET: list verified advocates
-    path("detail/<int:pk>/", AdvocateDetailView.as_view(), name="advocate-detail"), # GET: single advocate
-    path("update/", AdvocateUpdateView.as_view(), name="advocate-update"),         # PUT: self-update profile
-    path("verify/<int:pk>/", AdvocateVerifyView.as_view(), name="advocate-verify"),# POST: admin verify advocate
 
-    # -----------------------------
-    # Assistant Lawyer Endpoints
-    # -----------------------------
-    path("assistant/assign/", AssignAssistantView.as_view(), name="assign-assistant"), # POST: assign assistant
-    path("assistant/list/", ListAssistantsView.as_view(), name="list-assistants"),     # GET: list assistants for advocate
+    # -------------------------------------------------
+    # Advocate Profile APIs
+    # -------------------------------------------------
+    # Create advocate profile (ADVOCATE only, once)
+    path("profiles/create/",AdvocateCreateView.as_view(),name="advocate-profile-create"),
+
+    # List all VERIFIED advocate profiles (Public / Read-only)
+    path("profiles/",AdvocateListView.as_view(),name="advocate-profile-list"),
+
+    # Retrieve single advocate profile by ID (Public / Read-only)
+    path("profiles/<int:pk>/",AdvocateDetailView.as_view(),name="advocate-profile-detail"),
+
+    # Update logged-in advocate’s OWN profile (No ID in URL)
+    path("profiles/update/",AdvocateUpdateView.as_view(),name="advocate-profile-update"),
+
+     # -------------------------------------------------
+    # Verification
+    # -------------------------------------------------
+    path("profiles/upload-id/",AdvocateUploadOfficialIDView.as_view(),name="advocate-upload-id"),
+
+    path("profiles/<int:pk>/verify/",AdvocateVerifyView.as_view(),name="advocate-verify"),
+
+    # -------------------------------------------------
+    # Assistant Lawyers
+    # -------------------------------------------------
+
+    path("assistants/assign/",AssignAssistantView.as_view(),name="assistant-assign"),
+
+    path("assistants/",ListAssistantsView.as_view(),name="assistant-list"),
 ]

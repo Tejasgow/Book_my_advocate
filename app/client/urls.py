@@ -9,11 +9,6 @@ urlpatterns = [
     path('profile/update/', views.ClientProfileUpdateView.as_view(), name='client-profile-update'),
 
     # -----------------------------
-    # Client Dashboard
-    # -----------------------------
-    path('dashboard/', views.ClientDashboardView.as_view(), name='client-dashboard'),
-
-    # -----------------------------
     # Appointments
     # -----------------------------
     path('appointments/', views.ClientAppointmentsView.as_view(), name='client-appointments'),

@@ -27,18 +27,27 @@ class IsClientUser(BasePermission):
 # =================================================
 # OBJECT-LEVEL PERMISSIONS
 # =================================================
-
 class IsOwnerOrAdvocate(BasePermission):
     """
     Object-level permission to allow access only to:
     - the client who owns the appointment
     - or the advocate assigned to the appointment
     """
+
     def has_object_permission(self, request, view, obj):
-        return bool(
-            request.user and request.user.is_authenticated and
-            (obj.user == request.user or obj.advocate.user == request.user)
-        )
+
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        # If logged-in user is the client who booked
+        if obj.client and obj.client.user == request.user:
+            return True
+
+        # If logged-in user is the assigned advocate
+        if obj.advocate and obj.advocate.user == request.user:
+            return True
+
+        return False
 
 
 class IsAdminOrReadOnly(BasePermission):

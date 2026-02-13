@@ -1,5 +1,5 @@
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated,IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
@@ -15,9 +15,8 @@ from .permissions import IsAdvocate, IsCaseOwner
 from . import services
 
 
-
 # -------------------------------------------------
-# Create Case (ADVOCATE)
+# CREATE CASE (ADVOCATE)
 # -------------------------------------------------
 class CreateCaseView(APIView):
     permission_classes = [IsAuthenticated, IsAdvocate]
@@ -27,60 +26,91 @@ class CreateCaseView(APIView):
         serializer.is_valid(raise_exception=True)
 
         case = services.create_case(serializer)
-        return Response(CaseSerializer(case).data, status=status.HTTP_201_CREATED)
+
+        return Response(
+            CaseSerializer(case).data,
+            status=status.HTTP_201_CREATED
+        )
 
 
 # -------------------------------------------------
-# Client Cases
+# CLIENT CASES
 # -------------------------------------------------
 class UserCasesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        if not hasattr(request.user, "client_profile"):
+            return Response(
+                {"error": "Client profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         cases = services.get_client_cases(request.user.client_profile)
         return Response(CaseSerializer(cases, many=True).data)
 
 
 # -------------------------------------------------
-# Advocate Cases
+# ADVOCATE CASES
 # -------------------------------------------------
 class AdvocateCasesView(APIView):
     permission_classes = [IsAuthenticated, IsAdvocate]
 
     def get(self, request):
+        if not hasattr(request.user, "advocate_profile"):
+            return Response(
+                {"error": "Advocate profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         cases = services.get_advocate_cases(request.user.advocate_profile)
         return Response(CaseSerializer(cases, many=True).data)
 
 
 # -------------------------------------------------
-# Case Detail
+# CASE DETAIL
 # -------------------------------------------------
 class CaseDetailView(APIView):
     permission_classes = [IsAuthenticated, IsCaseOwner]
 
     def get(self, request, pk):
         case = services.get_case(pk)
+        if not case:
+            return Response(
+                {"error": "Case not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         self.check_object_permissions(request, case)
         return Response(CaseSerializer(case).data)
 
 
 # -------------------------------------------------
-# Add Hearing (ADVOCATE)
+# ADD HEARING (ADVOCATE)
 # -------------------------------------------------
 class CaseHearingCreateView(APIView):
     permission_classes = [IsAuthenticated, IsAdvocate]
 
     def post(self, request, case_id):
+        try:
+            advocate = request.user.advocate_profile
+        except AttributeError:
+            return Response(
+                {"error": "Advocate profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         case = get_object_or_404(
             Case,
             id=case_id,
-            advocate=request.user.advocate_profile
+            advocate=advocate
         )
 
         serializer = CaseHearingSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         hearing = services.add_hearing(case, serializer)
+
         return Response(
             CaseHearingSerializer(hearing).data,
             status=status.HTTP_201_CREATED
@@ -88,33 +118,52 @@ class CaseHearingCreateView(APIView):
 
 
 # -------------------------------------------------
-# View Hearings
+# VIEW HEARINGS
 # -------------------------------------------------
 class CaseHearingListView(APIView):
     permission_classes = [IsAuthenticated, IsCaseOwner]
 
     def get(self, request, case_id):
         case = services.get_case(case_id)
-        self.check_object_permissions(request, case)
+        if not case:
+            return Response(
+                {"error": "Case not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
+        self.check_object_permissions(request, case)
         hearings = services.list_hearings(case)
-        return Response(CaseHearingSerializer(hearings, many=True).data)
+
+        return Response(
+            CaseHearingSerializer(hearings, many=True).data
+        )
 
 
 # -------------------------------------------------
-# Upload Document
+# UPLOAD DOCUMENT
 # -------------------------------------------------
 class CaseDocumentUploadView(APIView):
     permission_classes = [IsAuthenticated, IsCaseOwner]
 
     def post(self, request, case_id):
         case = services.get_case(case_id)
+        if not case:
+            return Response(
+                {"error": "Case not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         self.check_object_permissions(request, case)
 
         serializer = CaseDocumentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        document = services.upload_document(case, request.user, serializer)
+        document = services.upload_document(
+            case,
+            request.user,
+            serializer
+        )
+
         return Response(
             CaseDocumentSerializer(document).data,
             status=status.HTTP_201_CREATED
@@ -122,36 +171,48 @@ class CaseDocumentUploadView(APIView):
 
 
 # -------------------------------------------------
-# View Documents
+# VIEW DOCUMENTS
 # -------------------------------------------------
 class CaseDocumentListView(APIView):
     permission_classes = [IsAuthenticated, IsCaseOwner]
 
     def get(self, request, case_id):
         case = services.get_case(case_id)
-        self.check_object_permissions(request, case)
+        if not case:
+            return Response(
+                {"error": "Case not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
+        self.check_object_permissions(request, case)
         documents = services.list_documents(case)
-        return Response(CaseDocumentSerializer(documents, many=True).data)
+
+        return Response(
+            CaseDocumentSerializer(documents, many=True).data
+        )
 
 
 # -------------------------------------------------
-# Download Document
+# DOWNLOAD DOCUMENT
 # -------------------------------------------------
 class CaseDocumentDownloadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, doc_id):
-        doc = get_object_or_404(CaseDocument, id=doc_id)
+        document = get_object_or_404(CaseDocument, id=doc_id)
 
-        response = services.download_document(doc, request.user)
+        response = services.download_document(document, request.user)
         if not response:
-            return Response({"detail": "Access denied"}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "Access denied"},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         return response
 
+
 # -------------------------------------------------
-# Admin Dashboard Stats
+# ADMIN DASHBOARD STATS
 # -------------------------------------------------
 class AdminDashboardStatsView(APIView):
     permission_classes = [IsAdminUser]
@@ -159,9 +220,9 @@ class AdminDashboardStatsView(APIView):
     def get(self, request):
         data = {
             "total_cases": Case.objects.count(),
-            "open_cases": Case.objects.filter(status='OPEN').count(),
-            "in_progress_cases": Case.objects.filter(status='IN_PROGRESS').count(),
-            "closed_cases": Case.objects.filter(status='CLOSED').count(),
+            "open_cases": Case.objects.filter(status="OPEN").count(),
+            "in_progress_cases": Case.objects.filter(status="IN_PROGRESS").count(),
+            "closed_cases": Case.objects.filter(status="CLOSED").count(),
 
             "total_hearings": CaseHearing.objects.count(),
             "total_documents": CaseDocument.objects.count(),

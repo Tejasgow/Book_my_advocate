@@ -1,6 +1,7 @@
 from django.db import models
 from app.accounts.models import User
 
+
 class ClientProfile(models.Model):
     user = models.OneToOneField(
         User,
@@ -8,7 +9,7 @@ class ClientProfile(models.Model):
         related_name='client_profile'
     )
 
-    phone = models.CharField(max_length=15)
+    phone = models.CharField(max_length=15,blank=True,null=True)
     address = models.TextField(blank=True)
     city = models.CharField(max_length=100, blank=True)
 

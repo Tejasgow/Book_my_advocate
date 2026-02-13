@@ -2,17 +2,71 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
-from .serializers import (RegisterSerializer,LoginSerializer,ProfileSerializer,
-    ChangePasswordSerializer,RequestOTPSerializer,VerifyOTPSerializer,
-    ResetPasswordSerializer)
+from django.conf import settings
 
-from .services import (register_user,login_user,get_user,update_profile,change_password,
-    request_password_otp,verify_password_otp,reset_password,logout_user)
+from .serializers import (
+    RegisterSerializer,
+    LoginSerializer,
+    ProfileSerializer,
+    ChangePasswordSerializer,
+    RequestOTPSerializer,
+    VerifyOTPSerializer,
+    ResetPasswordSerializer,
+)
+
+from .services import (
+    register_user,
+    login_user,
+    update_profile,
+    change_password,
+    request_password_otp,
+    verify_password_otp,
+    reset_password,
+    logout_user,
+)
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
-# =====================
-# REGISTER
-# =====================
+# =================================================
+# COOKIE UTILITIES
+# =================================================
+
+ACCESS_COOKIE_NAME = "access_token"
+REFRESH_COOKIE_NAME = "refresh_token"
+
+
+def set_auth_cookies(response, tokens):
+    """
+    Store JWT tokens securely in HttpOnly cookies
+    """
+    response.set_cookie(
+        key=ACCESS_COOKIE_NAME,
+        value=tokens["access"],
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="Lax",
+        max_age=60 * 15,  # 15 minutes
+    )
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=tokens["refresh"],
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="Lax",
+        max_age=60 * 60 * 24 * 7,  # 7 days
+    )
+
+
+def clear_auth_cookies(response):
+    response.delete_cookie(ACCESS_COOKIE_NAME)
+    response.delete_cookie(REFRESH_COOKIE_NAME)
+
+
+# =================================================
+# AUTH
+# =================================================
+
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
@@ -22,23 +76,26 @@ class RegisterView(APIView):
 
         user, tokens = register_user(serializer)
 
-        return Response({
-            "message": "User registered successfully 🎉",
-            "tokens": tokens,
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "first_name": user.first_name,
-                "middle_name": user.middle_name ,
-                "last_name": user.last_name,
-                "email": user.email,
-                "role": user.role,
-            }
-        }, status=201)
+        response = Response(
+            {
+                "message": "User registered successfully 🎉",
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "first_name": user.first_name,
+                    "middle_name": user.middle_name,
+                    "last_name": user.last_name,
+                    "email": user.email,
+                    "role": user.role,
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
-# =====================
-# LOGIN
-# =====================
+        set_auth_cookies(response, tokens)
+        return response
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -49,62 +106,84 @@ class LoginView(APIView):
         user = serializer.validated_data["user"]
         tokens = login_user(user)
 
-        return Response({
-            "message": "Login successful ✅",
-            "tokens": tokens
-        })
+        response = Response(
+            {"message": "Login successful ✅"},
+            status=status.HTTP_200_OK,
+        )
+
+        set_auth_cookies(response, tokens)
+        return response
 
 
-# =====================
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get("refresh_token")
+
+        if refresh_token:
+            logout_user(refresh_token)  # ✅ pass REFRESH TOKEN
+
+        response = Response(
+            {"message": "Logout successful 👋"},
+            status=status.HTTP_205_RESET_CONTENT,
+        )
+
+        clear_auth_cookies(response)
+        return response
+
+# =================================================
 # PROFILE
-# =====================
+# =================================================
+
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, user_id=None):
-        user = get_user(request.user, user_id)
-        if not user:
-            return Response({"error": "User not found"}, status=404)
+    def get(self, request):
+        serializer = ProfileSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        serializer = ProfileSerializer(user)
-        return Response(serializer.data)
-
-    def put(self, request, user_id=None):
-        user = get_user(request.user, user_id)
-        if not user:
-            return Response({"error": "User not found"}, status=404)
-
-        serializer = ProfileSerializer(user, data=request.data, partial=True)
+    def put(self, request):
+        serializer = ProfileSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+        )
         serializer.is_valid(raise_exception=True)
 
-        update_profile(user, serializer)
-        return Response({"message": "Profile updated successfully ✨"})
+        update_profile(request.user, serializer)
+
+        return Response(
+            {"message": "Profile updated successfully ✨"},
+            status=status.HTTP_200_OK,
+        )
 
 
-# =====================
-# CHANGE PASSWORD
-# =====================
+# =================================================
+# PASSWORD MANAGEMENT
+# =================================================
+
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = ChangePasswordSerializer(
             data=request.data,
-            context={"request": request}
+            context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
 
         change_password(
             request.user,
-            serializer.validated_data["new_password"]
+            serializer.validated_data["new_password"],
         )
 
-        return Response({"message": "Password changed successfully 🔐"})
+        return Response(
+            {"message": "Password changed successfully 🔐"},
+            status=status.HTTP_200_OK,
+        )
 
 
-# =====================
-# REQUEST OTP
-# =====================
 class RequestPasswordOTPView(APIView):
     permission_classes = [AllowAny]
 
@@ -113,12 +192,12 @@ class RequestPasswordOTPView(APIView):
         serializer.is_valid(raise_exception=True)
 
         request_password_otp(serializer.validated_data["phone"])
-        return Response({"message": "OTP sent successfully ✅"})
 
+        return Response(
+            {"message": "OTP sent successfully ✅"},
+            status=status.HTTP_200_OK,
+        )
 
-# =====================
-# VERIFY OTP
-# =====================
 class VerifyPasswordOTPView(APIView):
     permission_classes = [AllowAny]
 
@@ -126,13 +205,25 @@ class VerifyPasswordOTPView(APIView):
         serializer = VerifyOTPSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        verify_password_otp(serializer.validated_data["otp_obj"])
-        return Response({"message": "OTP verified successfully ✅"})
+        phone = serializer.validated_data["phone"]
+        entered_otp = serializer.validated_data["otp"]
+
+        user = User.objects.get(phone=phone)
+
+        success, message = verify_password_otp(user, entered_otp)
+
+        if not success:
+            return Response(
+                {"error": message},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(
+            {"message": message},
+            status=status.HTTP_200_OK
+        )
 
 
-# =====================
-# RESET PASSWORD
-# =====================
 class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
 
@@ -141,24 +232,14 @@ class ResetPasswordView(APIView):
         serializer.is_valid(raise_exception=True)
 
         reset_password(
-            serializer.validated_data["user"],
-            serializer.validated_data["otp_obj"],
-            serializer.validated_data["new_password"]
+            user=serializer.validated_data["user"],
+            otp_obj=serializer.validated_data["otp_obj"],
+            new_password=serializer.validated_data["new_password"],
         )
 
-        return Response({"message": "Password reset successfully 🔐"})
+        return Response(
+            {"message": "Password reset successfully 🔐"},
+            status=status.HTTP_200_OK,
+        )
 
-
-# =====================
-# LOGOUT
-# =====================
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        refresh = request.data.get("refresh")
-        if not refresh:
-            return Response({"error": "Refresh token required"}, status=400)
-
-        logout_user(refresh)
-        return Response({"message": "Logout successful 👋"}, status=205)
+    

@@ -1,40 +1,95 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-# -----------------------------
-# Only Advocates can access
-# -----------------------------
+
+# =================================================
+# Only Advocates
+# =================================================
 class IsAdvocate(BasePermission):
     """
-    Allows access only to users with role 'ADVOCATE'.
+    Allows access only to authenticated ADVOCATE users.
+    Object-level access restricted to own profile.
     """
+
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'ADVOCATE')
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and request.user.is_advocate()
+        )
+
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
 
 
-# -----------------------------
-# Admin users can write, others read-only
-# -----------------------------
+# =================================================
+# Only Admin / Superuser
+# =================================================
+class IsAdmin(BasePermission):
+    """
+    Allows access only to admin or superuser users.
+    """
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and (user.is_admin() or user.is_staff or user.is_superuser)
+        )
+
+
+# =================================================
+# Admin full access, others read-only
+# =================================================
 class IsAdminOrReadOnly(BasePermission):
     """
-    The request is authenticated as an admin user, or is a read-only request.
+    Admin users have full access.
+    Other users have read-only access.
     """
+
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
-        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and (user.is_admin() or user.is_staff or user.is_superuser)
+        )
 
 
-# -----------------------------
-# Only Assistant Lawyers (future use)
-# -----------------------------
+
+# =================================================
+# Assistant Lawyer
+# =================================================
 class IsAssistantLawyer(BasePermission):
     """
-    Allows access only to users assigned as assistant lawyers.
+    Allows access only to active assistant lawyers.
     """
+
     def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+
+        assistant = getattr(user, "assistant_profile", None)
+        return bool(assistant and assistant.is_active)
+
+
+# =================================================
+# Advocate Profile Creation
+# =================================================
+class CanCreateAdvocateProfile(BasePermission):
+    """
+    Allows only ADVOCATE users to create their own profile.
+    """
+
+    def has_permission(self, request, view):
+        user = request.user
+
         return bool(
-            request.user 
-            and request.user.is_authenticated 
-            and hasattr(request.user, 'assistant_profile') 
-            and request.user.assistant_profile.is_active
+            user
+            and user.is_authenticated
+            and user.is_advocate()
         )

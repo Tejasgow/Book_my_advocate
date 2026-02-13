@@ -3,9 +3,7 @@ from .models import ChatRoom, Message
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    sender_name = serializers.CharField(
-        source="sender.username", read_only=True
-    )
+    sender_name = serializers.CharField(source="sender.username", read_only=True)
 
     class Meta:
         model = Message
@@ -13,19 +11,15 @@ class MessageSerializer(serializers.ModelSerializer):
             "id",
             "sender",
             "sender_name",
-            "text",
+            "content",
             "created_at"
         ]
+        read_only_fields = ["sender", "created_at"]
 
 
 class ChatRoomSerializer(serializers.ModelSerializer):
-    messages = MessageSerializer(many=True, read_only=True)
+    appointment_id = serializers.IntegerField(source="appointment.id", read_only=True)
 
     class Meta:
         model = ChatRoom
-        fields = [
-            "id",
-            "appointment",
-            "messages",
-            "created_at"
-        ]
+        fields = ["id", "appointment_id", "created_at"]

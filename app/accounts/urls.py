@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (RegisterView,LoginView,LogoutView,ProfileView,ChangePasswordView,
     ResetPasswordView,RequestPasswordOTPView,VerifyPasswordOTPView)
-from rest_framework_simplejwt.views import (TokenRefreshView,TokenVerifyView)
+from .dashboard import DashboardView
+
 
 app_name = "accounts"
 
@@ -17,8 +18,7 @@ urlpatterns = [
     # =================================================
     # PROFILE
     # =================================================
-    path('profile/', ProfileView.as_view(), name='profile-self'),
-    path('profile/<int:user_id>/', ProfileView.as_view(), name='profile-detail'),
+    path("profile/", ProfileView.as_view(), name="profile-self"),
 
     # =================================================
     # PASSWORD MANAGEMENT
@@ -31,8 +31,10 @@ urlpatterns = [
     path('password/reset/', ResetPasswordView.as_view(), name='password-reset'),
 
     # =================================================
-    # JWT TOKEN MANAGEMENT
+    # DASHBOARD 
     # =================================================
-    path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
-    path('token/verify/', TokenVerifyView.as_view(), name='token-verify'),
+
+    path("dashboard/", DashboardView.as_view(), name="dashboard"),
+
+
 ]

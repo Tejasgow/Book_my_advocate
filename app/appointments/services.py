@@ -1,6 +1,8 @@
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.exceptions import ValidationError
 
 from .models import Appointment
 from .serializers import (
@@ -48,10 +50,14 @@ def create_appointment(request):
 # List Client Appointments
 # -----------------------------
 def list_client_appointments(user):
-    client = user.client_profile
+    try:
+        client = user.client_profile
+    except ObjectDoesNotExist:
+        raise ValidationError(
+            "Client profile not found. Please complete your profile."
+        )
+
     return Appointment.objects.filter(client=client)
-
-
 # -----------------------------
 # Update Appointment Status
 # -----------------------------
