@@ -8,13 +8,14 @@ from rest_framework.permissions import (
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from app.advocates.models import AdvocateProfile
+from app.advocates.models import AdvocateProfile,AssistantLawyer
+from app.cases.models import Case
 from .serializers import (
     AdvocateProfileSerializer,
     AdvocateCreateSerializer,
     AdvocateUpdateSerializer,
-    AssistantLawyerSerializer,
     AdvocateIDUploadSerializer,
+    AssistantLawyerSerializer,
     AssistantLawyerCreateSerializer,
 )
 from .permissions import (
@@ -39,10 +40,8 @@ class AdvocateCreateView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        serializer = AdvocateCreateSerializer(
-            data=request.data,
-            context={"request": request},
-        )
+        serializer = AdvocateCreateSerializer(data=request.data,
+            context={"request": request})
         serializer.is_valid(raise_exception=True)
         advocate = serializer.save()
 
@@ -53,6 +52,8 @@ class AdvocateCreateView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+    
+
 class AdvocateListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
@@ -81,6 +82,7 @@ class AdvocateListView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+    
 class AdvocateDetailView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
@@ -104,21 +106,15 @@ class AdvocateDetailView(APIView):
 
 class AdvocateUpdateView(APIView):
     permission_classes = [IsAuthenticated, IsAdvocate]
-
-    def patch(self, request):
-        advocate = getattr(request.user, "advocate_profile", None)
-
-        if not advocate:
+    def put(self, request):
+        if not hasattr(request.user, "advocate_profile"):
             return Response(
                 {"error": "Advocate profile not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-
-        serializer = AdvocateUpdateSerializer(
-            advocate,
-            data=request.data,
-            partial=True,
-        )
+        advocate = request.user.advocate_profile
+        serializer = AdvocateUpdateSerializer(advocate,
+            data=request.data,partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
@@ -129,6 +125,9 @@ class AdvocateUpdateView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+# =====================================================
+# UPLOAD OFFICIAL ID
+# =====================================================
 class AdvocateUploadOfficialIDView(APIView):
     permission_classes = [IsAuthenticated, IsAdvocate]
 
@@ -206,8 +205,7 @@ class AssignAssistantView(APIView):
         serializer = AssistantLawyerCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        assistant = services.assign_assistant(
-            advocate=advocate,
+        assistant = services.assign_assistant(advocate=advocate,
             assistant_user_id=serializer.validated_data["user_id"],
         )
 
@@ -219,6 +217,10 @@ class AssignAssistantView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+
+# =====================================================
+# LIST ASSISTANTS
+# =====================================================
 class ListAssistantsView(APIView):
     permission_classes = [IsAuthenticated, IsAdvocate]
 
@@ -231,8 +233,7 @@ class ListAssistantsView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        assistants = advocate.assistants.select_related("user").all()
-
+        assistants = request.user.advocate_profile.assistants.filter(is_active=True)
         serializer = AssistantLawyerSerializer(assistants, many=True)
 
         return Response(
@@ -243,3 +244,28 @@ class ListAssistantsView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+# =====================================================
+# DEACTIVATE ASSISTANT
+# =====================================================
+class DeactivateAssistantView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        if not hasattr(request.user, "advocate_profile"):
+            return Response(
+                {"error": "Only advocates can deactivate assistants"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        assistant = get_object_or_404(
+            AssistantLawyer,
+            id=pk,
+            advocate=request.user.advocate_profile
+        )
+
+        assistant.is_active = False
+        assistant.save()
+
+        return Response({"message": "Assistant deactivated ✅"})
+

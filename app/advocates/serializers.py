@@ -95,21 +95,13 @@ class AdvocateCreateSerializer(serializers.ModelSerializer):
     def to_internal_value(self, data):
         data = data.copy()
         specialization_input = data.get("specialization", "").strip().upper()
-
-        mapping = {
-            label.upper(): key
-            for key, label in AdvocateProfile.SPECIALIZATION_CHOICES
-        }
-
+        mapping = {label.upper(): key for key, label in AdvocateProfile.SPECIALIZATION_CHOICES }
         if specialization_input in mapping:
             data["specialization"] = mapping[specialization_input]
         elif specialization_input in dict(AdvocateProfile.SPECIALIZATION_CHOICES):
             data["specialization"] = specialization_input
         else:
-            raise serializers.ValidationError(
-                {"specialization": "Invalid specialization"}
-            )
-
+            raise serializers.ValidationError({"specialization": "Invalid specialization"})
         return super().to_internal_value(data)
 
     # -----------------------------
@@ -117,16 +109,12 @@ class AdvocateCreateSerializer(serializers.ModelSerializer):
     # -----------------------------
     def validate_experience_years(self, value):
         if value < 0:
-            raise serializers.ValidationError(
-                "Experience years must be a positive number"
-            )
+            raise serializers.ValidationError("Experience years must be a positive number")
         return value
 
     def validate_bar_council_id(self, value):
         if AdvocateProfile.objects.filter(bar_council_id=value).exists():
-            raise serializers.ValidationError(
-                "This Bar Council ID already exists"
-            )
+            raise serializers.ValidationError("This Bar Council ID already exists")
         return value
 
     # -----------------------------

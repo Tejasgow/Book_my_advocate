@@ -1,4 +1,5 @@
 from django.urls import path
+from .dashboard import AdvocateDashboardView
 from .views import (
     AdvocateCreateView,
     AdvocateListView,
@@ -8,6 +9,7 @@ from .views import (
     AdvocateVerifyView,
     AssignAssistantView,
     ListAssistantsView,
+    
 )
 
 urlpatterns = [
@@ -27,7 +29,7 @@ urlpatterns = [
     # Update logged-in advocate’s OWN profile (No ID in URL)
     path("profiles/update/",AdvocateUpdateView.as_view(),name="advocate-profile-update"),
 
-     # -------------------------------------------------
+    # -------------------------------------------------
     # Verification
     # -------------------------------------------------
     path("profiles/upload-id/",AdvocateUploadOfficialIDView.as_view(),name="advocate-upload-id"),
@@ -41,4 +43,10 @@ urlpatterns = [
     path("assistants/assign/",AssignAssistantView.as_view(),name="assistant-assign"),
 
     path("assistants/",ListAssistantsView.as_view(),name="assistant-list"),
+
+    # -------------------------------------------------
+    # Advocate dashboard
+    # -------------------------------------------------
+
+    path("dashboard/advocate/", AdvocateDashboardView.as_view(), name="advocate-dashboard"),
 ]

@@ -8,11 +8,8 @@ from django.core.exceptions import ValidationError
 # ADVOCATE PROFILE
 # =================================================
 class AdvocateProfile(models.Model):
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="advocate_profile"
-    )
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE, related_name="advocate_profile")
 
     # -----------------------------------
     # Personal / Contact Info
