@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 
 from .permissions import IsAdvocate
 from app.advocates.models import AdvocateProfile
+from app.cases.models import Case
+from django.utils import timezone
 
 
 # =================================================
@@ -26,8 +28,30 @@ class AdvocateDashboardView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Assistant Count
+        # ================================
+        # ASSISTANT COUNT
+        # ================================
         total_assistants = advocate.assistants.count()
+
+        # ================================
+        # CASE STATISTICS
+        # ================================
+        cases = Case.objects.filter(advocate=advocate)
+
+        total_cases = cases.count()
+        open_cases = cases.filter(status="OPEN").count()
+        in_progress_cases = cases.filter(status="IN_PROGRESS").count()
+        closed_cases = cases.filter(status="CLOSED").count()
+
+        # Upcoming Hearings (next 7 days)
+        today = timezone.now().date()
+        upcoming_hearings = cases.filter(
+            hearing_date__gte=today
+        ).order_by("hearing_date")[:5]
+
+        # Client Count (distinct clients)
+
+        total_clients = cases.values("client").distinct().count()
 
         # Profile Completion Logic
         fields_to_check = [
@@ -61,9 +85,27 @@ class AdvocateDashboardView(APIView):
                     "state": advocate.state,
                     "joined_on": advocate.created_at,
                 },
+                "case_stats": {
+                    "total_cases": total_cases,
+                    "open_cases": open_cases,
+                    "in_progress_cases": in_progress_cases,
+                    "closed_cases": closed_cases,
+                },
+                "client_stats": {
+                    "total_clients": total_clients
+                },
                 "assistant_stats": {
                     "total_assistants": total_assistants
                 },
+                "upcoming_hearings": [
+                    {
+                        "case_id": case.id,
+                        "case_title": case.title,
+                        "hearing_date": case.hearing_date,
+                        "status": case.status,
+                    }
+                    for case in upcoming_hearings
+                ],
                 "profile_completion_percentage": profile_completion,
             },
             status=status.HTTP_200_OK,
