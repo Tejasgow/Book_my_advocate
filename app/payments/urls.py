@@ -6,6 +6,7 @@ from .views import (
     PaymentStatsView,
     InvoiceDownloadView
 )
+from .dashboard import PaymentDashboardView
 
 urlpatterns = [
     path('payments/create/', CreatePaymentView.as_view()),
@@ -13,4 +14,9 @@ urlpatterns = [
     path('payments/refund/', RefundPaymentView.as_view()),
     path('payments/stats/', PaymentStatsView.as_view()),
     path('payments/<int:payment_id>/invoice/', InvoiceDownloadView.as_view()),
+
+    # =================================================
+    # DASHBOARD
+    # =================================================
+    path('dashboard/', PaymentDashboardView.as_view(), name='dashboard'),
 ]

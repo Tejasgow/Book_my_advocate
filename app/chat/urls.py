@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import CreateOrGetChatRoom, SendMessageView, GetMessagesView
+from .dashboard import ChatDashboardView
 
 app_name = "chat"
 
@@ -12,4 +13,9 @@ urlpatterns = [
 
     # Get all messages in a chat room
     path("room/<int:room_id>/messages/", GetMessagesView.as_view(), name="get_messages"),
+
+    # =================================================
+    # DASHBOARD
+    # =================================================
+    path("dashboard/", ChatDashboardView.as_view(), name="dashboard"),
 ]

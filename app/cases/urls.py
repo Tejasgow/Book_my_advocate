@@ -4,6 +4,7 @@ from .views import (
     CaseHearingListView,CaseHearingCreateView,CaseDocumentListView,
     CaseDocumentUploadView,CaseDocumentDownloadView,AdminDashboardStatsView
     )
+from .dashboard import CaseDashboardView
 
 urlpatterns = [
 
@@ -32,5 +33,10 @@ urlpatterns = [
     # ADMIN DASHBOARD
     # ===============================
     path('admin/dashboard/stats/', AdminDashboardStatsView.as_view(), name='admin-dashboard-stats'),
+
+    # ===============================
+    # DASHBOARD
+    # ===============================
+    path('dashboard/', CaseDashboardView.as_view(), name='dashboard'),
 
 ]

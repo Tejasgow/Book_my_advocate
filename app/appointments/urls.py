@@ -7,6 +7,7 @@ from .views import (
     AppointmentDetailView,
     AppointmentUpdateView,
 )
+from .dashboard import AppointmentDashboardView
 
 urlpatterns = [
 
@@ -35,4 +36,9 @@ urlpatterns = [
 
     # Approve / Reject / Complete appointment
     path('advocate/appointments/<int:pk>/status/',AppointmentStatusUpdateView.as_view(),name='advocate-appointment-status'),
+
+    # =================================================
+    # DASHBOARD
+    # =================================================
+    path('dashboard/', AppointmentDashboardView.as_view(), name='dashboard'),
 ]

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .dashboard import ClientDashboardView
 
 urlpatterns = [
     # -----------------------------
@@ -28,4 +29,9 @@ urlpatterns = [
     # Case Documents
     # -----------------------------
     path('cases/<int:case_id>/documents/', views.ClientCaseDocumentsView.as_view(), name='client-case-documents'),
+
+    # =================================================
+    # DASHBOARD
+    # =================================================
+    path('dashboard/', ClientDashboardView.as_view(), name='dashboard'),
 ]
