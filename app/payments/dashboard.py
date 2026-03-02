@@ -44,11 +44,9 @@ class PaymentDashboardView(APIView):
                 "pending_payments": payments.filter(status='CREATED').count(),
                 "total_revenue": str(total_revenue),
                 "average_transaction": str(
-                    payments.filter(status='SUCCESS').aggregate(
-                        avg=Sum('amount')
-                    )['avg'] / max(
+                    total_revenue / max(
                         payments.filter(status='SUCCESS').count(), 1
-                    ) if payments.filter(status='SUCCESS').exists() else Decimal('0.00')
+                    ) if payments.filter(status='SUCCESS').count() > 0 else Decimal('0.00')
                 ),
             }
 

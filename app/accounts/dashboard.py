@@ -28,10 +28,10 @@ class DashboardView(APIView):
                 "total_advocates": User.objects.filter(role="ADVOCATE").count(),
 
                 "total_appointments": Appointment.objects.count(),
-                "pending": Appointment.objects.filter(status="PENDING").count(),
-                "approved": Appointment.objects.filter(status="APPROVED").count(),
-                "completed": Appointment.objects.filter(status="COMPLETED").count(),
-                "cancelled": Appointment.objects.filter(status="CANCELLED").count(),
+                "pending": Appointment.objects.filter(status=Appointment.STATUS_PENDING).count(),
+                "approved": Appointment.objects.filter(status=Appointment.STATUS_APPROVED).count(),
+                "completed": Appointment.objects.filter(status=Appointment.STATUS_COMPLETED).count(),
+                "cancelled": Appointment.objects.filter(status=Appointment.STATUS_CANCELLED).count(),
             }
 
             return Response({
@@ -56,10 +56,10 @@ class DashboardView(APIView):
 
             stats = {
                 "total_appointments": appointments.count(),
-                "pending": appointments.filter(status="PENDING").count(),
-                "approved": appointments.filter(status="APPROVED").count(),
-                "completed": appointments.filter(status="COMPLETED").count(),
-                "cancelled": appointments.filter(status="CANCELLED").count(),
+                "pending": appointments.filter(status=Appointment.STATUS_PENDING).count(),
+                "approved": appointments.filter(status=Appointment.STATUS_APPROVED).count(),
+                "completed": appointments.filter(status=Appointment.STATUS_COMPLETED).count(),
+                "cancelled": appointments.filter(status=Appointment.STATUS_CANCELLED).count(),
                 "today": appointments.filter(
                     appointment_date=timezone.now().date()
                 ).count(),
@@ -90,10 +90,10 @@ class DashboardView(APIView):
 
             stats = {
                 "total_appointments": appointments.count(),
-                "pending": appointments.filter(status="PENDING").count(),
-                "approved": appointments.filter(status="APPROVED").count(),
-                "completed": appointments.filter(status="COMPLETED").count(),
-                "cancelled": appointments.filter(status="CANCELLED").count(),
+                "pending": appointments.filter(status=Appointment.STATUS_PENDING).count(),
+                "approved": appointments.filter(status=Appointment.STATUS_APPROVED).count(),
+                "completed": appointments.filter(status=Appointment.STATUS_COMPLETED).count(),
+                "cancelled": appointments.filter(status=Appointment.STATUS_CANCELLED).count(),
                 "upcoming": appointments.filter(
                     appointment_date__gte=timezone.now().date()
                 ).count(),

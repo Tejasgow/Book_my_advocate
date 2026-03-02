@@ -20,3 +20,4 @@ urlpatterns = [
     # =================================================
     path('dashboard/', PaymentDashboardView.as_view(), name='dashboard'),
 ]
+

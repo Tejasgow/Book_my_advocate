@@ -25,7 +25,7 @@ class User(AbstractUser):
 
     # ---------- Personal Information ----------
     middle_name = models.CharField(max_length=50, blank=True, null=True)
-    phone = models.CharField(max_length=15, unique=True, blank=True)
+    phone = models.CharField(max_length=15, unique=True, blank=True,null=True,)
     address = models.TextField(blank=True)
 
     # ---------- Role Management ----------

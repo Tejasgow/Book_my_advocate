@@ -49,14 +49,31 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
     def validate_phone(self, value):
+        if not value or not value.strip():
+            return value
         value = value.strip()
         if User.objects.filter(phone=value).exists():
             raise serializers.ValidationError("Phone number already registered")
         return value
 
+    def validate_role(self, value):
+        # Convert to uppercase to handle case-insensitive input
+        if value:
+            value = value.upper()
+            if value not in dict(User.ROLE_CHOICES):
+                raise serializers.ValidationError(
+                    f"Invalid role. Must be one of: {', '.join(dict(User.ROLE_CHOICES).keys())}"
+                )
+        return value
+
     def validate_email(self, value):
         if value and User.objects.filter(email=value).exists():
             raise serializers.ValidationError("Email already registered")
+        return value
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already taken")
         return value
 
     def validate(self, attrs):

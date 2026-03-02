@@ -52,7 +52,7 @@ class ReviewDashboardView(APIView):
             recent_data = [
                 {
                     "id": review.id,
-                    "client": review.client.first_name,
+                    "client": review.client.user.first_name,
                     "rating": review.rating,
                     "comment": review.comment[:100] if review.comment else "",
                     "date": review.created_at,
@@ -71,7 +71,12 @@ class ReviewDashboardView(APIView):
         # CLIENT REVIEW DASHBOARD
         # =================================================
         elif user.role == "CLIENT":
-            reviews_written = Review.objects.filter(client=user)
+            if not hasattr(user, "client_profile"):
+                return Response(
+                    {"error": "Client profile not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            reviews_written = Review.objects.filter(client=user.client_profile)
 
             stats = {
                 "total_reviews_written": reviews_written.count(),

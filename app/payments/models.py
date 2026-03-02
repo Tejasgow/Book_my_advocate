@@ -12,10 +12,7 @@ class Payment(models.Model):
     )
 
     appointment = models.OneToOneField(
-        Appointment,
-        on_delete=models.CASCADE,
-        related_name='payment'
-    )
+        Appointment,on_delete=models.CASCADE,related_name='payment')
 
     client = models.ForeignKey(ClientProfile, on_delete=models.CASCADE)
 
