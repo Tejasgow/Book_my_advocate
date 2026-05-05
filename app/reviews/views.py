@@ -15,7 +15,7 @@ from .permissions import IsClientUser, IsOwnerOrReadOnly
 # -----------------------------
 class CreateReviewView(APIView):
     permission_classes = [IsAuthenticated, IsClientUser]
-
+    
     def post(self, request):
         serializer = ReviewCreateSerializer(
             data=request.data,
@@ -29,12 +29,11 @@ class CreateReviewView(APIView):
 
         return Response(
             {
-                "message": "Review submitted successfully ✅",
+                # "message": "Review submitted successfully ✅",
                 "data": ReviewSerializer(review).data
             },
             status=status.HTTP_201_CREATED
         )
-
 
 # -----------------------------
 # List Reviews for an Advocate
@@ -54,7 +53,7 @@ class AdvocateReviewListView(APIView):
         serializer = ReviewSerializer(reviews, many=True)
 
         return Response({
-            "message": "Reviews fetched successfully ✅",
+            # "message": "Reviews fetched successfully ✅",
             "average_rating": round(avg_rating, 2),
             "data": serializer.data
         })
@@ -86,14 +85,14 @@ class ReviewDetailView(APIView):
         review.refresh_from_db()
 
         return Response({
-            "message": "Review updated successfully ✅",
+            # "message": "Review updated successfully ✅",
             "data": ReviewSerializer(review).data
         })
 
     def delete(self, request, pk):
         review = self.get_object(pk)
         review.delete()
-        return Response(
-            {"message": "Review deleted successfully ✅"},
-            status=status.HTTP_204_NO_CONTENT
-        )
+        return Response({"message": "Review deleted successfully ✅"},
+            status=status.HTTP_204_NO_CONTENT)
+
+

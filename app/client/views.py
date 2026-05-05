@@ -113,3 +113,4 @@ class ClientCaseDocumentsView(APIView):
             many=True
         )
         return Response({"documents": serializer.data})
+

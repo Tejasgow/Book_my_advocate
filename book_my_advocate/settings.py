@@ -74,26 +74,21 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True # Set to False for production
 CORS_ALLOW_CREDENTIALS = True
-
 
 ROOT_URLCONF = 'book_my_advocate.urls'
 
 # CORS Configuration for React Frontend
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',      # React dev server
     'http://localhost:5173',      # Vite dev server
-    'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
     'http://192.168.0.3:5173',
 ]
 
-CSRF_TRUSTED_ORIGINS=[
+CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
+    'http://127.0.0.1:5173',
     'http://192.168.0.3:5173',
-
-
 ]
 
 TEMPLATES = [
@@ -116,7 +111,7 @@ WSGI_APPLICATION = 'book_my_advocate.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
+ 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -125,18 +120,14 @@ DATABASES = {
 }
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES':
-    (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'app.accounts.authentication.CookieJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
-    ),
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "app.accounts.authentication.CookieJWTAuthentication",
     ),
 }
 
@@ -199,13 +190,11 @@ DEFAULT_FROM_EMAIL = 'Book My Advocate <tejasvijay96@gmail.com>'
 RAZORPAY_KEY_ID = "rzp_test_xxxxx"
 RAZORPAY_KEY_SECRET = "xxxxxxxx"
 
-
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
 
-# Production only
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False  # False for dev http://localhost
+SESSION_COOKIE_SECURE = False  # False for dev http://localhost
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

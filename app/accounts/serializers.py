@@ -8,20 +8,13 @@ import re
 # =================================================
 
 def password_validator(password):
-    if len(password) < 8:
-        raise serializers.ValidationError("Password must be at least 8 characters long.")
-    if not re.search(r"[A-Z]", password):
-        raise serializers.ValidationError("Password must contain at least one uppercase letter.")
-    if not re.search(r"[a-z]", password):
-        raise serializers.ValidationError("Password must contain at least one lowercase letter.")
-    if not re.search(r"\d", password):
-        raise serializers.ValidationError("Password must contain at least one number.")
+    if len(password) < 6:
+        raise serializers.ValidationError("Password must be at least 6 characters long.")
     return password
 
 
 def username_validator(username):
-    if not re.search(r"[A-Z]", username):
-        raise serializers.ValidationError("Username must contain at least one uppercase letter.")
+    # Username can be any string, no uppercase requirement
     return username
 
 
@@ -97,13 +90,23 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        user = authenticate(
-            username=attrs.get('username'),
-            password=attrs.get('password')
-        )
-
+        username = attrs.get('username')
+        password = attrs.get('password')
+        
+        # First check if user exists
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        user_exists = User.objects.filter(username=username).exists()
+        if not user_exists:
+            raise serializers.ValidationError("User with this username does not exist. Please register first.")
+        
+        # Then authenticate
+        user = authenticate(username=username, password=password)
+        
         if not user:
-            raise serializers.ValidationError("Invalid username or password")
+            raise serializers.ValidationError("Invalid password. Please try again.")
+        
         if not user.is_active:
             raise serializers.ValidationError("User account is disabled")
 

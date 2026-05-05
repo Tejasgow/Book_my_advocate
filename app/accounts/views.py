@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .services import create_tokens_for_user
 from rest_framework import status
 from django.conf import settings
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import (
     RegisterSerializer,
@@ -45,16 +46,18 @@ def set_auth_cookies(response, tokens):
         key=ACCESS_COOKIE_NAME,
         value=tokens["access"],
         httponly=True,
-        secure=not settings.DEBUG,
+        secure=False,  # Set to True in production with HTTPS
         samesite="Lax",
-        max_age=60 * 15,  # 15 minutes
+        path="/",
+        max_age=60 * 60 * 24,  # 24 hours
     )
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=tokens["refresh"],
         httponly=True,
-        secure=not settings.DEBUG,
+        secure=False,  # Set to True in production with HTTPS
         samesite="Lax",
+        path="/",
         max_age=60 * 60 * 24 * 7,  # 7 days
     )
 
@@ -75,13 +78,13 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user = serializer.save()   # IMPORTANT
+        user = serializer.save()
 
-        tokens = create_tokens_for_user(user)  # your JWT function
+        tokens = create_tokens_for_user(user)
 
         response = Response(
             {
-                "message": "User registered successfully 🎉",
+                "message": "User registered successfully",
                 "user": {
                     "id": user.id,
                     "username": user.username,
@@ -91,12 +94,11 @@ class RegisterView(APIView):
                     "email": user.email,
                     "role": user.role,
                 },
+                "tokens": tokens,  # Include tokens in response for frontend
             },
             status=status.HTTP_201_CREATED,
         )
-
         set_auth_cookies(response, tokens)
-
         return response
 
 class LoginView(APIView):
@@ -110,7 +112,19 @@ class LoginView(APIView):
         tokens = login_user(user)
 
         response = Response(
-            {"message": "Login successful ✅"},
+            {
+                "message": "Login successful",
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "first_name": user.first_name,
+                    "middle_name": user.middle_name,
+                    "last_name": user.last_name,
+                    "email": user.email,
+                    "role": user.role,
+                },
+                "tokens": tokens,
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -125,10 +139,10 @@ class LogoutView(APIView):
         refresh_token = request.COOKIES.get("refresh_token")
 
         if refresh_token:
-            logout_user(refresh_token)  # ✅ pass REFRESH TOKEN
+            logout_user(refresh_token)
 
         response = Response(
-            {"message": "Logout successful 👋"},
+            {"message": "Logout successful"},
             status=status.HTTP_205_RESET_CONTENT,
         )
 
@@ -157,7 +171,7 @@ class ProfileView(APIView):
         update_profile(request.user, serializer)
 
         return Response(
-            {"message": "Profile updated successfully ✨"},
+            {"message": "Profile updated successfully"},
             status=status.HTTP_200_OK,
         )
 
@@ -182,7 +196,7 @@ class ChangePasswordView(APIView):
         )
 
         return Response(
-            {"message": "Password changed successfully 🔐"},
+            {"message": "Password changed successfully"},
             status=status.HTTP_200_OK,
         )
 
@@ -197,7 +211,7 @@ class RequestPasswordOTPView(APIView):
         request_password_otp(serializer.validated_data["phone"])
 
         return Response(
-            {"message": "OTP sent successfully ✅"},
+            {"message": "OTP sent successfully"},
             status=status.HTTP_200_OK,
         )
 
@@ -241,8 +255,48 @@ class ResetPasswordView(APIView):
         )
 
         return Response(
-            {"message": "Password reset successfully 🔐"},
+            {"message": "Password reset successfully"},
             status=status.HTTP_200_OK,
         )
 
-    
+
+# =================================================
+# TOKEN REFRESH
+# =================================================
+
+class RefreshTokenView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Get refresh token from request body or cookies
+        refresh_token = request.data.get("refresh") or request.COOKIES.get("refresh_token")
+        
+        if not refresh_token:
+            return Response(
+                {"error": "Refresh token is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            refresh = RefreshToken(refresh_token)
+            tokens = {
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            }
+            
+            response = Response({
+                "access": tokens["access"],
+                "refresh": tokens["refresh"],
+            })
+            
+            # Also set cookies
+            set_auth_cookies(response, tokens)
+            
+            return response
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
